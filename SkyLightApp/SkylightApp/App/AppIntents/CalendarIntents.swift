@@ -113,6 +113,70 @@ enum IntentCalendarHelper {
             timezone: TimeZone.current.identifier
         )
     }
+
+    /// Fetches events starting within the specified number of minutes from now
+    /// Excludes all-day events by default since they don't have specific start times
+    static func fetchEventsStartingWithin(minutes: Int, includeAllDay: Bool = false) async throws -> [CalendarEvent] {
+        guard let frameId = AuthenticationManager.shared.currentFrameId else {
+            throw IntentError.notLoggedIn
+        }
+
+        let service = CalendarService()
+        let now = Date()
+        let endTime = Calendar.current.date(byAdding: .minute, value: minutes, to: now) ?? now
+
+        // Fetch events for today and tomorrow to handle edge cases near midnight
+        let startOfDay = Calendar.current.startOfDay(for: now)
+        let dayAfterTomorrow = Calendar.current.date(byAdding: .day, value: 2, to: startOfDay) ?? now
+
+        let allEvents = try await service.getEvents(
+            frameId: frameId,
+            from: startOfDay,
+            to: dayAfterTomorrow,
+            timezone: TimeZone.current.identifier
+        )
+
+        // Filter to events starting between now and the end time
+        return allEvents.filter { event in
+            // Skip all-day events unless explicitly included
+            if event.isAllDay && !includeAllDay {
+                return false
+            }
+            // Event must start after now and within the time window
+            return event.startDate > now && event.startDate <= endTime
+        }.sorted { $0.startDate < $1.startDate }
+    }
+
+    /// Gets the next upcoming event (non-all-day) that hasn't started yet
+    static func fetchNextEvent(includeAllDay: Bool = false) async throws -> CalendarEvent? {
+        guard let frameId = AuthenticationManager.shared.currentFrameId else {
+            throw IntentError.notLoggedIn
+        }
+
+        let service = CalendarService()
+        let now = Date()
+
+        // Look ahead 7 days to find the next event
+        let endDate = Calendar.current.date(byAdding: .day, value: 7, to: now) ?? now
+
+        let allEvents = try await service.getEvents(
+            frameId: frameId,
+            from: now,
+            to: endDate,
+            timezone: TimeZone.current.identifier
+        )
+
+        // Find the first event that starts after now
+        return allEvents
+            .filter { event in
+                if event.isAllDay && !includeAllDay {
+                    return false
+                }
+                return event.startDate > now
+            }
+            .sorted { $0.startDate < $1.startDate }
+            .first
+    }
 }
 
 // MARK: - Get Today's Events Intent
@@ -172,6 +236,110 @@ struct GetUpcomingEventsIntent: AppIntent {
     }
 }
 
+// MARK: - Get Next Event Intent
+
+struct GetNextEventIntent: AppIntent {
+    static var title: LocalizedStringResource = "Get Next Skylight Event"
+    static var description = IntentDescription("Returns the next upcoming calendar event from your Skylight. Useful for checking what's coming up next.")
+
+    @Parameter(title: "Include All-Day Events", default: false)
+    var includeAllDay: Bool
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Get next Skylight event") {
+            \.$includeAllDay
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<CalendarEventEntity?> {
+        guard let event = try await IntentCalendarHelper.fetchNextEvent(includeAllDay: includeAllDay) else {
+            return .result(value: nil)
+        }
+        return .result(value: CalendarEventEntity(from: event))
+    }
+}
+
+// MARK: - Get Events Starting Within Intent
+
+struct GetEventsStartingWithinIntent: AppIntent {
+    static var title: LocalizedStringResource = "Get Skylight Events Starting Soon"
+    static var description = IntentDescription("Returns calendar events starting within the specified number of minutes. Perfect for automation triggers like 'start car climate control if I have an event in 30 minutes'.")
+
+    @Parameter(title: "Minutes", default: 30)
+    var minutes: Int
+
+    @Parameter(title: "Include All-Day Events", default: false)
+    var includeAllDay: Bool
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Get Skylight events starting within \(\.$minutes) minutes") {
+            \.$includeAllDay
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<[CalendarEventEntity]> {
+        let events = try await IntentCalendarHelper.fetchEventsStartingWithin(
+            minutes: minutes,
+            includeAllDay: includeAllDay
+        )
+        let entities = events.map { CalendarEventEntity(from: $0) }
+        return .result(value: entities)
+    }
+}
+
+// MARK: - Has Upcoming Event Intent
+
+struct HasUpcomingEventIntent: AppIntent {
+    static var title: LocalizedStringResource = "Check If Skylight Event Starting Soon"
+    static var description = IntentDescription("Returns true if there's a calendar event starting within the specified minutes. Ideal for conditional automations like 'IF event starting soon THEN start car climate'.")
+
+    @Parameter(title: "Minutes", default: 30)
+    var minutes: Int
+
+    @Parameter(title: "Include All-Day Events", default: false)
+    var includeAllDay: Bool
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Check if Skylight event starting within \(\.$minutes) minutes") {
+            \.$includeAllDay
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<Bool> {
+        let events = try await IntentCalendarHelper.fetchEventsStartingWithin(
+            minutes: minutes,
+            includeAllDay: includeAllDay
+        )
+        return .result(value: !events.isEmpty)
+    }
+}
+
+// MARK: - Get Minutes Until Next Event Intent
+
+struct GetMinutesUntilNextEventIntent: AppIntent {
+    static var title: LocalizedStringResource = "Get Minutes Until Next Skylight Event"
+    static var description = IntentDescription("Returns the number of minutes until the next calendar event starts. Returns -1 if no upcoming events. Useful for conditional logic in Shortcuts.")
+
+    @Parameter(title: "Include All-Day Events", default: false)
+    var includeAllDay: Bool
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Get minutes until next Skylight event") {
+            \.$includeAllDay
+        }
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<Int> {
+        guard let event = try await IntentCalendarHelper.fetchNextEvent(includeAllDay: includeAllDay) else {
+            return .result(value: -1)
+        }
+
+        let now = Date()
+        let minutes = Int(event.startDate.timeIntervalSince(now) / 60)
+        return .result(value: max(0, minutes))
+    }
+}
+
 // MARK: - Intent Errors
 
 enum IntentError: Swift.Error, CustomLocalizedStringResourceConvertible {
@@ -212,6 +380,50 @@ struct SkylightShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Upcoming Events",
             systemImageName: "calendar.badge.clock"
+        )
+
+        AppShortcut(
+            intent: GetNextEventIntent(),
+            phrases: [
+                "Get my next \(.applicationName) event",
+                "What's next on \(.applicationName)",
+                "When is my next \(.applicationName) event"
+            ],
+            shortTitle: "Next Event",
+            systemImageName: "calendar.badge.exclamationmark"
+        )
+
+        AppShortcut(
+            intent: GetEventsStartingWithinIntent(),
+            phrases: [
+                "Get \(.applicationName) events starting soon",
+                "Any \(.applicationName) events coming up soon",
+                "Check \(.applicationName) for events starting soon"
+            ],
+            shortTitle: "Events Starting Soon",
+            systemImageName: "clock.badge.exclamationmark"
+        )
+
+        AppShortcut(
+            intent: HasUpcomingEventIntent(),
+            phrases: [
+                "Do I have a \(.applicationName) event soon",
+                "Check if \(.applicationName) event starting soon",
+                "Is there a \(.applicationName) event coming up"
+            ],
+            shortTitle: "Event Starting Soon?",
+            systemImageName: "questionmark.circle"
+        )
+
+        AppShortcut(
+            intent: GetMinutesUntilNextEventIntent(),
+            phrases: [
+                "How long until my next \(.applicationName) event",
+                "Minutes until next \(.applicationName) event",
+                "Time until next \(.applicationName) event"
+            ],
+            shortTitle: "Time Until Next Event",
+            systemImageName: "timer"
         )
     }
 }
