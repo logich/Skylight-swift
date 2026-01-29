@@ -1,0 +1,31 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="#7E57C2"/>
+
+  <!-- White circle -->
+  <circle cx="512" cy="512" r="340" fill="white" fill-opacity="0.95"/>
+
+  <!-- Calendar body (rounded rect) -->
+  <rect x="312" y="340" width="400" height="370" rx="30" ry="30" fill="#7E57C2"/>
+
+  <!-- Calendar top bar -->
+  <rect x="312" y="340" width="400" height="80" rx="30" ry="30" fill="#5E3BA0"/>
+  <rect x="312" y="390" width="400" height="30" fill="#5E3BA0"/>
+
+  <!-- Calendar binding holes -->
+  <rect x="380" y="310" width="24" height="70" rx="12" fill="#7E57C2"/>
+  <rect x="500" y="310" width="24" height="70" rx="12" fill="#7E57C2"/>
+  <rect x="620" y="310" width="24" height="70" rx="12" fill="#7E57C2"/>
+
+  <!-- Calendar grid lines - horizontal -->
+  <line x1="342" y1="500" x2="682" y2="500" stroke="white" stroke-width="6" stroke-opacity="0.4"/>
+  <line x1="342" y1="580" x2="682" y2="580" stroke="white" stroke-width="6" stroke-opacity="0.4"/>
+
+  <!-- Calendar grid lines - vertical -->
+  <line x1="425" y1="450" x2="425" y2="680" stroke="white" stroke-width="6" stroke-opacity="0.4"/>
+  <line x1="512" y1="450" x2="512" y2="680" stroke="white" stroke-width="6" stroke-opacity="0.4"/>
+  <line x1="599" y1="450" x2="599" y2="680" stroke="white" stroke-width="6" stroke-opacity="0.4"/>
+
+  <!-- Highlight dot on one day -->
+  <circle cx="555" cy="540" r="28" fill="white"/>
+</svg>

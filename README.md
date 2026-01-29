@@ -33,9 +33,16 @@ git clone https://github.com/logich/Skylight-swift.git
 cd Skylight-swift
 ```
 
-### Step 2: Create Xcode Project
+### Step 2: Prepare for Xcode Project
 
-Since this repository contains only source files, you need to create an Xcode project:
+First, temporarily rename the source folder to avoid conflicts:
+
+```bash
+cd Skylight-swift
+mv SkyLightApp SkyLightApp-source
+```
+
+### Step 3: Create Xcode Project
 
 1. **Open Xcode** and select **File → New → Project**
 
@@ -52,16 +59,32 @@ Since this repository contains only source files, you need to create an Xcode pr
    - Click **Next**
 
 4. **Save location**:
-   - Save the project **inside** the cloned `Skylight-swift` folder
-   - This will create `SkyLightApp.xcodeproj` alongside the `SkyLightApp/` source folder
+   - Navigate to and select the `Skylight-swift` folder
+   - Click **Create**
 
-### Step 3: Add Source Files to Project
+### Step 4: Replace Generated Files with Source Code
+
+1. **In Finder**, open the `Skylight-swift` folder
+
+2. **Delete Xcode's auto-generated files** inside `SkyLightApp/`:
+   - Delete `ContentView.swift`
+   - Delete `SkyLightAppApp.swift`
+   - Keep the `Assets.xcassets` folder
+
+3. **Copy our source code** into the Xcode project folder:
+   ```bash
+   cd Skylight-swift
+   cp -R SkyLightApp-source/* SkyLightApp/
+   rm -rf SkyLightApp-source
+   ```
+
+### Step 5: Add Source Files to Xcode
 
 1. In Xcode, **right-click** on the `SkyLightApp` folder in the Project Navigator (left sidebar)
 
 2. Select **Add Files to "SkyLightApp"...**
 
-3. Navigate to the `SkyLightApp/` source folder and select **all subfolders**:
+3. Navigate into the `SkyLightApp/` folder and select **all subfolders**:
    - `App/`
    - `Core/`
    - `Features/`
@@ -69,16 +92,12 @@ Since this repository contains only source files, you need to create an Xcode pr
    - `Utilities/`
 
 4. In the dialog:
-   - Check **"Copy items if needed"** (uncheck if files are already in place)
+   - **Uncheck** "Copy items if needed" (files are already in place)
    - Check **"Create groups"**
-   - Ensure your target is selected
+   - Ensure your target `SkyLightApp` is checked
    - Click **Add**
 
-5. **Delete the auto-generated files** that Xcode created (if they conflict):
-   - `ContentView.swift` (we have our own)
-   - `SkyLightAppApp.swift` (we have `SkyLightApp.swift`)
-
-### Step 4: Configure Signing
+### Step 6: Configure Signing
 
 1. Select the **project** in the Navigator (blue icon at top)
 
@@ -94,7 +113,7 @@ Since this repository contains only source files, you need to create an Xcode pr
 
 6. Xcode will create a provisioning profile automatically
 
-### Step 5: Build and Run
+### Step 7: Build and Run
 
 #### On Simulator
 
