@@ -126,6 +126,7 @@ struct CalendarView: View {
                         } label: {
                             CalendarEventRow(event: event)
                         }
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                     }
                 } header: {
                     Text(date.displayDate)
@@ -452,6 +453,7 @@ struct EventDetailView: View {
             Section("Location") {
                 if let location = event.location, !location.isEmpty {
                     Label(location, systemImage: "mappin.circle")
+                    DriveTimeRow(location: location)
                 } else {
                     Text("No location")
                         .foregroundStyle(.secondary)
@@ -502,6 +504,111 @@ struct AttendeeAvatarView: View {
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundStyle(attendee.displayColor)
+        }
+    }
+}
+
+// MARK: - Drive Time Components
+
+struct DriveTimeBadge: View {
+    let location: String
+
+    @State private var driveTimeMinutes: Int?
+    @State private var isLoading = false
+    @State private var hasFailed = false
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(0.6)
+            } else if let minutes = driveTimeMinutes {
+                HStack(spacing: 2) {
+                    Image(systemName: "car.fill")
+                    Text("\(minutes)m")
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            } else if hasFailed {
+                EmptyView()
+            }
+        }
+        .task {
+            await fetchDriveTime()
+        }
+    }
+
+    private func fetchDriveTime() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let minutes = try await LocationService.shared.getDrivingTimeToAddress(location)
+            driveTimeMinutes = minutes
+        } catch {
+            hasFailed = true
+        }
+    }
+}
+
+struct DriveTimeRow: View {
+    let location: String
+
+    @State private var driveTimeMinutes: Int?
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        HStack {
+            Label {
+                if isLoading {
+                    Text("Calculating drive time...")
+                        .foregroundStyle(.secondary)
+                } else if let minutes = driveTimeMinutes {
+                    Text("\(minutes) min drive from current location")
+                } else if let error = errorMessage {
+                    Text(error)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Tap to calculate drive time")
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: "car.fill")
+            }
+
+            Spacer()
+
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(0.8)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            Task {
+                await fetchDriveTime()
+            }
+        }
+        .task {
+            await fetchDriveTime()
+        }
+    }
+
+    private func fetchDriveTime() async {
+        guard !isLoading else { return }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let minutes = try await LocationService.shared.getDrivingTimeToAddress(location)
+            driveTimeMinutes = minutes
+            errorMessage = nil
+        } catch let error as LocationError {
+            errorMessage = String(localized: error.localizedStringResource)
+        } catch {
+            errorMessage = "Unable to calculate drive time"
         }
     }
 }
