@@ -31,7 +31,7 @@ final class CalendarViewModel: ObservableObject {
         case month = "Month"
     }
 
-    @Published var displayMode: DisplayMode = .week
+    @Published var displayMode: DisplayMode = .day
 
     init(
         calendarService: CalendarServiceProtocol = CalendarService(),
@@ -50,12 +50,14 @@ final class CalendarViewModel: ObservableObject {
         // Check cache first (unless force refresh)
         if !forceRefresh, let cached = eventsCache[cacheKey], !cached.isExpired(after: cacheExpiration) {
             events = cached.events
+            await DriveTimeManager.shared.processEvents(getAllUpcomingCachedEvents())
             return
         }
 
         // Check if we can filter from a larger cached range
         if !forceRefresh, let cached = findCachedEventsContaining(start: startDate, end: endDate) {
             events = cached
+            await DriveTimeManager.shared.processEvents(getAllUpcomingCachedEvents())
             return
         }
 
@@ -74,6 +76,10 @@ final class CalendarViewModel: ObservableObject {
             // Store in cache
             eventsCache[cacheKey] = CachedEvents(events: fetchedEvents, timestamp: Date())
             events = fetchedEvents
+
+            // Process all cached events for drive time calculations, notifications, and widget updates
+            // Use all cached events so the widget has a complete picture regardless of display mode
+            await DriveTimeManager.shared.processEvents(getAllUpcomingCachedEvents())
         } catch {
             self.error = error
             self.showError = true
@@ -130,6 +136,29 @@ final class CalendarViewModel: ObservableObject {
         eventsCache.removeAll()
     }
 
+    func fetchEvent(byId eventId: String) async -> CalendarEvent? {
+        guard let frameId = authManager.currentFrameId else { return nil }
+
+        if let event = events.first(where: { $0.id == eventId }) {
+            return event
+        }
+
+        do {
+            let startDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+            let endDate = Calendar.current.date(byAdding: .month, value: 2, to: Date()) ?? Date()
+            let timezone = TimeZone.current.identifier
+            let allEvents = try await calendarService.getEvents(
+                frameId: frameId,
+                from: startDate,
+                to: endDate,
+                timezone: timezone
+            )
+            return allEvents.first(where: { $0.id == eventId })
+        } catch {
+            return nil
+        }
+    }
+
     // MARK: - Private Helpers
 
     private func cacheKey(for start: Date, end: Date) -> String {
@@ -158,6 +187,23 @@ final class CalendarViewModel: ObservableObject {
             }
         }
         return nil
+    }
+
+    /// Gathers all upcoming events from all non-expired cache entries for widget updates
+    /// This ensures the widget has a complete picture regardless of current display mode
+    private func getAllUpcomingCachedEvents() -> [CalendarEvent] {
+        var allEvents: [String: CalendarEvent] = [:] // Use dict to dedupe by event ID
+        let now = Date()
+
+        for (_, cached) in eventsCache {
+            guard !cached.isExpired(after: cacheExpiration) else { continue }
+
+            for event in cached.events where event.startDate > now {
+                allEvents[event.id] = event
+            }
+        }
+
+        return Array(allEvents.values).sorted { $0.startDate < $1.startDate }
     }
 
     private func dateRangeForMode() -> (Date, Date) {

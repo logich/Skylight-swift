@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject private var authManager: AuthenticationManager
+    @ObservedObject private var deepLinkManager = DeepLinkManager.shared
     @State private var selectedTab: Tab = .calendar
 
     enum Tab: String, CaseIterable {
@@ -53,6 +54,11 @@ struct MainTabView: View {
                     Label(Tab.settings.rawValue, systemImage: Tab.settings.systemImage)
                 }
                 .tag(Tab.settings)
+        }
+        .onChange(of: deepLinkManager.pendingEventId) { _, eventId in
+            if eventId != nil {
+                selectedTab = .calendar
+            }
         }
     }
 }

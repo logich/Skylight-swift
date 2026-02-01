@@ -4,118 +4,113 @@
 Create a native iOS application that integrates with the Skylight Calendar API to provide users with access to their Skylight family calendar, chores, lists, tasks, and other features directly from their iPhone or iPad.
 
 ## Project Status
-**Phase**: Planning & Architecture
-**Target Platform**: iOS 16.0+
-**Language**: Swift
+**Phase**: Feature Complete - Polish & Enhancement
+**Target Platform**: iOS 17.0+
+**Language**: Swift 5.9+
 **Architecture**: SwiftUI + MVVM
 
-## Key Objectives
+## Completed Features
 
-1. **Core Features**
-   - View calendar events
-   - Manage chores (view, create, mark complete)
-   - Access shopping and to-do lists
-   - Create and manage tasks
-   - View family members and their profiles
-   - Track reward points (if Skylight Plus subscription)
+### Core Features ✅
+- [x] User authentication with Skylight credentials
+- [x] Frame (household) selection
+- [x] View calendar events (day/week/month views)
+- [x] View and manage chores
+- [x] View shopping and to-do lists
+- [x] View family members
+- [x] Secure credential storage (Keychain)
+- [x] Pull-to-refresh on all lists
+- [x] Smart caching with 60-minute expiration
 
-2. **User Experience**
-   - Native iOS design following Apple Human Interface Guidelines
-   - Smooth, responsive interface
-   - Offline capability with local caching
-   - Background sync for up-to-date data
-   - Secure credential storage
+### Advanced Features ✅
+- [x] **Drive Time Calculation** - Shows driving time to events with locations
+- [x] **Time to Leave Widget** - Home screen and lock screen widgets showing next event with leave countdown
+- [x] **Time to Leave Notifications** - Local alerts when it's time to leave for events
+- [x] **Siri Shortcuts Integration** - 6 app intents for calendar automation
+- [x] **Background Refresh** - Periodic data updates via iOS background tasks
+- [x] **Deep Linking** - `skylight://event/{id}` URL scheme for widget navigation
 
-3. **Technical Goals**
-   - Clean, maintainable code architecture
-   - Comprehensive error handling
-   - Unit and integration tests
-   - Secure API communication
-   - Efficient data management
+### Settings ✅
+- [x] Current household display
+- [x] Switch household option
+- [x] Account information
+- [x] Drive time alerts toggle
+- [x] Buffer time configuration (5/10/15/20/30 min)
+- [x] Sign out with confirmation
 
 ## Project Structure
 
 ```
-SkyLightApp/
-├── SkyLightApp/
+SkylightApp/
+├── SkylightApp/
 │   ├── App/
-│   │   ├── SkyLightApp.swift              # App entry point
-│   │   └── AppDelegate.swift              # App lifecycle management
+│   │   ├── SkyLightApp.swift              # App entry point with notifications & background tasks
+│   │   ├── ContentView.swift              # Auth flow router
+│   │   ├── MainTabView.swift              # Tab navigation (Calendar, Chores, Lists, Family, Settings)
+│   │   ├── BackgroundTaskManager.swift    # Background refresh handling
+│   │   └── AppIntents/
+│   │       └── CalendarIntents.swift      # 6 Shortcuts intents
 │   ├── Core/
-│   │   ├── Network/
-│   │   │   ├── APIClient.swift            # Base networking layer
-│   │   │   ├── APIEndpoint.swift          # API endpoint definitions
-│   │   │   └── APIError.swift             # Error handling
 │   │   ├── Authentication/
-│   │   │   ├── AuthenticationManager.swift # Auth flow management
-│   │   │   └── KeychainManager.swift      # Secure storage
-│   │   └── Models/
-│   │       ├── CalendarEvent.swift
-│   │       ├── Chore.swift
-│   │       ├── List.swift
-│   │       ├── Task.swift
-│   │       ├── FamilyMember.swift
-│   │       └── Frame.swift
+│   │   │   ├── AuthenticationManager.swift # Auth state & frame selection
+│   │   │   └── KeychainManager.swift       # Secure credential storage
+│   │   ├── Models/
+│   │   │   ├── CalendarEvent.swift         # Main event model with JSON:API parsing
+│   │   │   ├── WidgetEvent.swift           # Lightweight model for widget/notifications
+│   │   │   ├── User.swift
+│   │   │   ├── Frame.swift
+│   │   │   ├── Chore.swift
+│   │   │   ├── ShoppingList.swift
+│   │   │   ├── Task.swift
+│   │   │   ├── FamilyMember.swift
+│   │   │   └── AuthResponse.swift
+│   │   └── Network/
+│   │       ├── APIClient.swift             # HTTP client with logging
+│   │       ├── APIEndpoint.swift           # Endpoint protocol
+│   │       ├── SkylightEndpoint.swift      # 40+ API endpoints
+│   │       └── APIError.swift              # Error handling
 │   ├── Features/
 │   │   ├── Authentication/
-│   │   │   ├── Views/
-│   │   │   │   ├── LoginView.swift
-│   │   │   │   └── FrameSelectionView.swift
-│   │   │   └── ViewModels/
-│   │   │       └── AuthenticationViewModel.swift
+│   │   │   ├── Views/ (LoginView, FrameSelectionView)
+│   │   │   └── ViewModels/ (LoginViewModel)
 │   │   ├── Calendar/
-│   │   │   ├── Views/
-│   │   │   │   ├── CalendarView.swift
-│   │   │   │   └── EventDetailView.swift
-│   │   │   └── ViewModels/
-│   │   │       └── CalendarViewModel.swift
+│   │   │   ├── Views/ (CalendarView with 7 components, EventDetailView, DriveTimeBadge)
+│   │   │   └── ViewModels/ (CalendarViewModel with caching)
 │   │   ├── Chores/
-│   │   │   ├── Views/
-│   │   │   │   ├── ChoresListView.swift
-│   │   │   │   ├── ChoreDetailView.swift
-│   │   │   │   └── CreateChoreView.swift
-│   │   │   └── ViewModels/
-│   │   │       └── ChoresViewModel.swift
+│   │   │   ├── Views/ (ChoresView)
+│   │   │   └── ViewModels/ (ChoresViewModel)
 │   │   ├── Lists/
-│   │   │   ├── Views/
-│   │   │   │   ├── ListsView.swift
-│   │   │   │   └── ListDetailView.swift
-│   │   │   └── ViewModels/
-│   │   │       └── ListsViewModel.swift
-│   │   ├── Tasks/
-│   │   │   ├── Views/
-│   │   │   │   └── CreateTaskView.swift
-│   │   │   └── ViewModels/
-│   │   │       └── TasksViewModel.swift
-│   │   └── Family/
-│   │       ├── Views/
-│   │       │   └── FamilyView.swift
-│   │       └── ViewModels/
-│   │           └── FamilyViewModel.swift
+│   │   │   ├── Views/ (ListsView)
+│   │   │   └── ViewModels/ (ListsViewModel)
+│   │   ├── Family/
+│   │   │   ├── Views/ (FamilyView)
+│   │   │   └── ViewModels/ (FamilyViewModel)
+│   │   └── Settings/
+│   │       └── Views/ (SettingsView with Time to Leave section)
 │   ├── Services/
-│   │   ├── CalendarService.swift          # Calendar API calls
-│   │   ├── ChoresService.swift            # Chores API calls
-│   │   ├── ListsService.swift             # Lists API calls
-│   │   ├── TasksService.swift             # Tasks API calls
-│   │   └── FamilyService.swift            # Family API calls
-│   ├── Utilities/
-│   │   ├── Extensions/
-│   │   │   ├── Date+Extensions.swift
-│   │   │   ├── String+Extensions.swift
-│   │   │   └── View+Extensions.swift
-│   │   ├── Constants.swift
-│   │   └── Logger.swift
-│   └── Resources/
-│       ├── Assets.xcassets
-│       ├── Localizable.strings
-│       └── Info.plist
-├── SkyLightAppTests/
-│   ├── Network/
-│   ├── Services/
-│   └── ViewModels/
-└── SkyLightAppUITests/
-    └── E2ETests/
-
+│   │   ├── CalendarService.swift           # Calendar API calls
+│   │   ├── LocationService.swift           # Geocoding & driving directions
+│   │   ├── DriveTimeManager.swift          # Time to Leave orchestration
+│   │   ├── NotificationService.swift       # Local notification scheduling
+│   │   ├── SharedDataManager.swift         # App Group data sharing
+│   │   ├── ChoresService.swift
+│   │   ├── ListsService.swift
+│   │   ├── TasksService.swift
+│   │   └── FamilyService.swift
+│   └── Utilities/
+│       ├── Constants.swift                 # API URLs, Keychain keys
+│       ├── SharedConstants.swift           # App Group ID, notification IDs, URL scheme
+│       ├── JSONCoders.swift                # Custom date handling
+│       └── Extensions/
+│           ├── Date+Extensions.swift       # 15+ date helpers
+│           ├── Color+Extensions.swift      # Hex color parsing
+│           └── View+Extensions.swift
+├── SkylightWidget/                         # Widget Extension
+│   ├── SkylightWidget.swift                # Widget views & TimelineProvider
+│   ├── WidgetEvent.swift                   # Event model for widget
+│   ├── SharedConstants.swift               # Shared constants copy
+│   └── SkylightWidgetExtension.entitlements
+└── SkylightApp.xcodeproj/
 ```
 
 ## Technology Stack
@@ -124,183 +119,65 @@ SkyLightApp/
 - **Language**: Swift 5.9+
 - **UI Framework**: SwiftUI
 - **Architecture**: MVVM (Model-View-ViewModel)
-- **Minimum iOS Version**: iOS 16.0
+- **Minimum iOS Version**: iOS 17.0 (iOS 26.2 SDK)
+- **Concurrency**: Swift async/await
 
-### Key Libraries & Frameworks
+### Frameworks Used
 - **Foundation**: Core utilities
-- **Combine**: Reactive programming for data flow
-- **URLSession**: Native HTTP networking
-- **KeychainAccess** (or native Keychain): Secure credential storage
 - **SwiftUI**: User interface
-- **XCTest**: Unit and UI testing
+- **WidgetKit**: Home screen & lock screen widgets
+- **UserNotifications**: Local "Time to Leave" alerts
+- **CoreLocation**: Current location access
+- **MapKit**: Driving directions & time calculation
+- **BackgroundTasks**: Periodic background refresh
+- **App Intents**: Siri Shortcuts integration
+- **App Groups**: Data sharing between app and widget
 
-### Optional Libraries (to be evaluated)
-- **Alamofire**: Alternative to URLSession for more convenience
-- **SwiftyJSON**: JSON parsing (if not using Codable)
-- **Realm** or **CoreData**: Local database for offline support
+## Targets
 
-## Reference Materials
+| Target | Bundle ID | Description |
+|--------|-----------|-------------|
+| SkylightApp | com.rosetrace.SkylightApp | Main iOS app |
+| SkylightWidgetExtension | com.rosetrace.SkylightApp.SkylightWidget | Widget extension |
 
-### API Documentation
-Based on the reverse-engineered Skylight API:
-- **Swagger UI**: https://theeaglebyte.github.io/skylight-api/swagger.html
-- **ReDoc**: https://theeaglebyte.github.io/skylight-api/redoc.html
-- **OpenAPI Spec**: https://theeaglebyte.github.io/skylight-api/openapi/openapi.yaml
+## App Groups
+- **ID**: `group.com.skylightapp.shared`
+- **Purpose**: Share calendar events and settings between main app and widget
 
-### Reference Implementation
-- **MCP Server (TypeScript)**: https://github.com/TheEagleByte/skylight-mcp
-  - Use as reference for API request/response formats
-  - Authentication flow implementation
-  - Error handling patterns
+## URL Scheme
+- **Scheme**: `skylight://`
+- **Event Deep Link**: `skylight://event/{eventId}`
 
-### Design Guidelines
-- **Apple HIG**: https://developer.apple.com/design/human-interface-guidelines/
-- **SwiftUI Tutorials**: https://developer.apple.com/tutorials/swiftui
+## API Integration
+- **Base URL**: `https://app.ourskylight.com`
+- **Format**: JSON:API with `data` and `included` arrays
+- **Authentication**: Basic Auth (Base64 `userId:token`)
+- **Reference**: [Skylight API Swagger](https://theeaglebyte.github.io/skylight-api/swagger.html)
 
-## Development Phases
+## Security
+- Credentials stored in iOS Keychain
+- HTTPS-only API communication
+- Token-based authentication
+- No sensitive data logging in production
 
-### Phase 1: Foundation (Weeks 1-2)
-- Set up Xcode project structure
-- Implement base networking layer
-- Create authentication flow
-- Implement secure credential storage
-- Basic error handling
+## Known Limitations
+- Unofficial/reverse-engineered API (may change without notice)
+- Drive time requires location permission
+- Widget updates limited by iOS WidgetKit policies
+- Background refresh minimum interval is 15 minutes
 
-### Phase 2: Core Features (Weeks 3-5)
-- Calendar view and event display
-- Chores list and creation
-- Lists viewing
-- Task creation
-- Family member display
+## Resources for Development
 
-### Phase 3: Enhancement (Weeks 6-7)
-- Offline support with local caching
-- Background sync
-- Push notifications (if API supports)
-- Settings and preferences
-- Polish UI/UX
+### Internal Documentation
+- `technical_specification.md` - Detailed technical specs
+- `api_integration_guide.md` - API usage patterns
+- `implementation_roadmap.md` - Development phases and progress
+- `skylight_api_resources.md` - Original API research
 
-### Phase 4: Testing & Refinement (Week 8)
-- Comprehensive testing
-- Bug fixes
-- Performance optimization
-- App Store preparation
+### External Resources
+- [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/)
+- [SwiftUI Documentation](https://developer.apple.com/documentation/swiftui)
+- [WidgetKit Documentation](https://developer.apple.com/documentation/widgetkit)
 
-## Success Criteria
-
-### Must Have (MVP)
-- [ ] User can log in with Skylight credentials
-- [ ] User can select their frame (household)
-- [ ] User can view calendar events
-- [ ] User can view chores list
-- [ ] User can create new chores
-- [ ] User can view shopping/to-do lists
-- [ ] User can add tasks
-- [ ] User can view family members
-- [ ] Credentials stored securely
-- [ ] Proper error handling and user feedback
-
-### Should Have
-- [ ] Chores can be marked complete
-- [ ] Chores can be filtered by assignee/date
-- [ ] Calendar events can be filtered
-- [ ] List items can be checked off
-- [ ] Offline viewing of cached data
-- [ ] Background data refresh
-- [ ] Pull-to-refresh on all lists
-
-### Nice to Have
-- [ ] Rewards tracking
-- [ ] Widgets for home screen
-- [ ] Siri shortcuts
-- [ ] Apple Watch companion app
-- [ ] Dark mode support
-- [ ] Multiple frame support
-- [ ] Local notifications for upcoming chores
-- [ ] Export calendar to Apple Calendar
-
-## Risks & Mitigations
-
-### Risk 1: Unofficial API Changes
-**Risk**: Skylight could change their API without notice, breaking the app
-**Mitigation**: 
-- Implement robust error handling
-- Version API requests
-- Monitor API changes via community
-- Have fallback/graceful degradation
-
-### Risk 2: Authentication Complexity
-**Risk**: Auth flow may be complex or change
-**Mitigation**:
-- Follow MCP server's proven implementation
-- Add comprehensive logging
-- Support both email/password and token methods
-
-### Risk 3: Frame ID Discovery
-**Risk**: Users need to find their Frame ID manually
-**Mitigation**:
-- Implement automatic frame discovery after login
-- Show list of available frames to user
-- Provide clear instructions if manual input needed
-
-### Risk 4: Rate Limiting
-**Risk**: API may have undocumented rate limits
-**Mitigation**:
-- Implement request throttling
-- Cache data locally
-- Batch requests where possible
-- Monitor for rate limit errors
-
-## Security Considerations
-
-1. **Credential Storage**
-   - Use iOS Keychain for username/password
-   - Secure token storage
-   - Never log sensitive data
-   - Clear credentials on logout
-
-2. **Network Security**
-   - HTTPS only
-   - Certificate pinning (optional but recommended)
-   - Validate all API responses
-   - Handle man-in-the-middle scenarios
-
-3. **Data Privacy**
-   - Minimize data stored locally
-   - Clear cache on logout
-   - Follow iOS privacy best practices
-   - No analytics without consent
-
-## Open Questions
-
-1. Does the Skylight API support push notifications or webhooks?
-2. What are the actual rate limits?
-3. Are there any terms of service restrictions on third-party apps?
-4. How should we handle users with multiple frames?
-5. Should we support landscape orientation on iPad?
-6. What's the data retention policy for cached information?
-
-## Resources for Claude Code
-
-When working with Claude Code on this project, refer to:
-1. **Technical Specification**: `technical_specification.md`
-2. **API Integration Guide**: `api_integration_guide.md`
-3. **Implementation Roadmap**: `implementation_roadmap.md`
-4. **Architecture Guide**: `architecture_guide.md`
-5. **Original API Resources**: `skylight_api_resources.md`
-
-## Contact & Collaboration
-
-This is a reverse-engineered integration with an unofficial API. The project should:
-- Follow Apple's guidelines for App Store submission
-- Respect Skylight's intellectual property
-- Not misrepresent affiliation with Skylight
-- Include appropriate disclaimers about unofficial status
-
-## Notes
-
-- This app is built on reverse-engineered API and is unofficial
-- API may change without notice
-- Use at your own risk
-- Ensure compliance with Skylight terms of service
-- Consider reaching out to Skylight for official API access or partnership
+## Disclaimer
+This app is built on a reverse-engineered API and is **unofficial**. It is not affiliated with or endorsed by Skylight. The API may change without notice. Use at your own risk.

@@ -2,6 +2,9 @@ import SwiftUI
 
 struct CalendarView: View {
     @StateObject private var viewModel = CalendarViewModel()
+    @ObservedObject private var deepLinkManager = DeepLinkManager.shared
+    @State private var deepLinkEvent: CalendarEvent?
+    @State private var showDeepLinkEvent = false
 
     var body: some View {
         NavigationStack {
@@ -57,6 +60,33 @@ struct CalendarView: View {
             } message: {
                 Text(viewModel.error?.localizedDescription ?? "Unknown error")
             }
+            .onChange(of: deepLinkManager.pendingEventId) { _, eventId in
+                if let eventId = eventId {
+                    handleDeepLinkNavigation(eventId: eventId)
+                }
+            }
+            .navigationDestination(isPresented: $showDeepLinkEvent) {
+                if let event = deepLinkEvent {
+                    EventDetailView(event: event)
+                }
+            }
+        }
+    }
+
+    private func handleDeepLinkNavigation(eventId: String) {
+        if let event = viewModel.events.first(where: { $0.id == eventId }) {
+            deepLinkEvent = event
+            showDeepLinkEvent = true
+            deepLinkManager.clearPendingEvent()
+            return
+        }
+
+        Task {
+            if let event = await viewModel.fetchEvent(byId: eventId) {
+                deepLinkEvent = event
+                showDeepLinkEvent = true
+            }
+            deepLinkManager.clearPendingEvent()
         }
     }
 
@@ -124,7 +154,7 @@ struct CalendarView: View {
                         NavigationLink {
                             EventDetailView(event: event)
                         } label: {
-                            CalendarEventRow(event: event)
+                        EventRow(event: event)
                         }
                         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                     }
@@ -153,7 +183,7 @@ struct CalendarView: View {
 
             // Calendar grid
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 8) {
-                ForEach(daysInMonth, id: \.self) { date in
+                ForEach(Array(daysInMonth.enumerated()), id: \.offset) { index, date in
                     if let date = date {
                         MonthDayCell(
                             date: date,
@@ -184,7 +214,7 @@ struct CalendarView: View {
 
     private var weekdayHeader: some View {
         HStack(spacing: 0) {
-            ForEach(["S", "M", "T", "W", "T", "F", "S"], id: \.self) { day in
+            ForEach(Array(["S", "M", "T", "W", "T", "F", "S"].enumerated()), id: \.offset) { index, day in
                 Text(day)
                     .font(.caption)
                     .fontWeight(.medium)
@@ -233,7 +263,7 @@ struct CalendarView: View {
                 NavigationLink {
                     EventDetailView(event: event)
                 } label: {
-                    MonthEventRow(event: event)
+                    EventRow(event: event)
                 }
             }
 
@@ -315,7 +345,7 @@ struct MonthDayCell: View {
     }
 }
 
-struct MonthEventRow: View {
+struct EventRow: View {
     let event: CalendarEvent
 
     var body: some View {
@@ -353,44 +383,6 @@ struct MonthEventRow: View {
                     Text(event.endDate.displayTime)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
-                }
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-struct CalendarEventRow: View {
-    let event: CalendarEvent
-
-    var body: some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(event.displayColor)
-                .frame(width: 4)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(event.title)
-                    .font(.headline)
-                    .lineLimit(1)
-
-                HStack(spacing: 8) {
-                    if event.isAllDay == true {
-                        Text("All day")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text(event.startDate.displayTime)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if let location = event.location, !location.isEmpty {
-                        Label(location, systemImage: "mappin")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
                 }
             }
         }

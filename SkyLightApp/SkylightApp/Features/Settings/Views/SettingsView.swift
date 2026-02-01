@@ -4,9 +4,16 @@ struct SettingsView: View {
     @EnvironmentObject private var authManager: AuthenticationManager
     @State private var showLogoutConfirmation = false
 
+    // Drive time settings
+    @State private var driveTimeAlertsEnabled = SharedDataManager.shared.driveTimeAlertsEnabled
+    @State private var bufferTimeMinutes = SharedDataManager.shared.bufferTimeMinutes
+    @State private var isRequestingNotificationPermission = false
+
     var body: some View {
         NavigationStack {
             List {
+                timeToLeaveSection
+
                 Section {
                     if let frame = authManager.currentFrame {
                         HStack {
@@ -108,6 +115,73 @@ struct SettingsView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
+            .onAppear {
+                // Sync state with shared data
+                driveTimeAlertsEnabled = SharedDataManager.shared.driveTimeAlertsEnabled
+                bufferTimeMinutes = SharedDataManager.shared.bufferTimeMinutes
+            }
+        }
+    }
+
+    // MARK: - Time to Leave Section
+
+    private var timeToLeaveSection: some View {
+        Section {
+            Toggle(isOn: $driveTimeAlertsEnabled) {
+                Label {
+                    Text("Drive Time Alerts")
+                } icon: {
+                    Image(systemName: "car.fill")
+                        .foregroundStyle(.blue)
+                }
+            }
+            .disabled(isRequestingNotificationPermission)
+            .onChange(of: driveTimeAlertsEnabled) { oldValue, newValue in
+                Task {
+                    await handleDriveTimeAlertsToggle(enabled: newValue)
+                }
+            }
+
+            if driveTimeAlertsEnabled {
+                Picker(selection: $bufferTimeMinutes) {
+                    ForEach(SharedConstants.Defaults.bufferTimeOptions, id: \.self) { minutes in
+                        Text("\(minutes) min").tag(minutes)
+                    }
+                } label: {
+                    Label {
+                        Text("Buffer Time")
+                    } icon: {
+                        Image(systemName: "clock.badge.checkmark")
+                            .foregroundStyle(.orange)
+                    }
+                }
+                .onChange(of: bufferTimeMinutes) { oldValue, newValue in
+                    Task {
+                        await DriveTimeManager.shared.updateBufferTime(newValue)
+                    }
+                }
+            }
+        } header: {
+            Text("Time to Leave")
+        } footer: {
+            Text("Get notified when it's time to leave for events with locations. Buffer time adds extra minutes before the calculated leave time.")
+        }
+    }
+
+    // MARK: - Actions
+
+    private func handleDriveTimeAlertsToggle(enabled: Bool) async {
+        if enabled {
+            isRequestingNotificationPermission = true
+            defer { isRequestingNotificationPermission = false }
+
+            let authorized = await DriveTimeManager.shared.enableDriveTimeAlerts()
+            if !authorized {
+                // Reset toggle if permission was denied
+                driveTimeAlertsEnabled = false
+            }
+        } else {
+            await DriveTimeManager.shared.disableDriveTimeAlerts()
         }
     }
 }

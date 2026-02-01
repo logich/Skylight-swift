@@ -7,7 +7,6 @@ final class LocationService: NSObject {
     static let shared = LocationService()
 
     private let locationManager = CLLocationManager()
-    private let geocoder = CLGeocoder()
 
     private var locationContinuation: CheckedContinuation<CLLocation, Error>?
 
@@ -50,15 +49,19 @@ final class LocationService: NSObject {
 
     // MARK: - Geocoding
 
-    /// Converts an address string to coordinates
+    /// Converts an address string to coordinates using MKLocalSearch
     func geocode(address: String) async throws -> CLLocationCoordinate2D {
-        let placemarks = try await geocoder.geocodeAddressString(address)
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = address
 
-        guard let location = placemarks.first?.location else {
+        let search = MKLocalSearch(request: request)
+        let response = try await search.start()
+
+        guard let coordinate = response.mapItems.first?.placemark.coordinate else {
             throw LocationError.geocodingFailed
         }
 
-        return location.coordinate
+        return coordinate
     }
 
     // MARK: - Directions
@@ -67,8 +70,21 @@ final class LocationService: NSObject {
     /// Returns the travel time in minutes
     func getDrivingTime(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) async throws -> Int {
         let request = MKDirections.Request()
-        request.source = MKMapItem(placemark: MKPlacemark(coordinate: origin))
-        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
+
+        // Use location-based MKMapItem initializer (iOS 18+)
+        let originLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
+        let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
+
+        if #available(iOS 26.0, *) {
+            request.source = MKMapItem(location: originLocation, address: nil)
+        } else {
+            // Fallback on earlier versions
+        }
+        if #available(iOS 26.0, *) {
+            request.destination = MKMapItem(location: destinationLocation, address: nil)
+        } else {
+            // Fallback on earlier versions
+        }
         request.transportType = .automobile
         request.requestsAlternateRoutes = false
 

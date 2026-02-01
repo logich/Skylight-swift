@@ -192,7 +192,7 @@ struct CalendarView: View {
     var body: some View {
         NavigationStack {
             List(viewModel.events) { event in
-                CalendarEventRow(event: event)
+                EventRow(event: event)
             }
             .navigationTitle("Calendar")
             .refreshable {
