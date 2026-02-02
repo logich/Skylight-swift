@@ -47,6 +47,39 @@ final class LocationService: NSObject {
         }
     }
 
+    // MARK: - Location Search
+
+    /// Searches for locations matching the query
+    func searchLocations(query: String) async throws -> [LocationSearchResult] {
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
+            return []
+        }
+
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+
+        // Bias results towards user's current region if available
+        if let location = locationManager.location {
+            let region = MKCoordinateRegion(
+                center: location.coordinate,
+                latitudinalMeters: 50000,
+                longitudinalMeters: 50000
+            )
+            request.region = region
+        }
+
+        let search = MKLocalSearch(request: request)
+        let response = try await search.start()
+
+        return response.mapItems.map { mapItem in
+            LocationSearchResult(
+                name: mapItem.name ?? "",
+                address: mapItem.placemark.formattedAddress,
+                coordinate: mapItem.placemark.coordinate
+            )
+        }
+    }
+
     // MARK: - Geocoding
 
     /// Converts an address string to coordinates using MKLocalSearch
@@ -142,6 +175,55 @@ extension LocationService: CLLocationManagerDelegate {
 }
 
 // MARK: - Errors
+
+// MARK: - Location Search Result
+
+struct LocationSearchResult: Identifiable, Equatable {
+    let id = UUID()
+    let name: String
+    let address: String
+    let coordinate: CLLocationCoordinate2D
+
+    var displayText: String {
+        if name.isEmpty {
+            return address
+        } else if address.isEmpty {
+            return name
+        } else {
+            return "\(name), \(address)"
+        }
+    }
+
+    static func == (lhs: LocationSearchResult, rhs: LocationSearchResult) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+// MARK: - CLPlacemark Extension
+
+extension CLPlacemark {
+    var formattedAddress: String {
+        var components: [String] = []
+
+        if let street = thoroughfare {
+            if let number = subThoroughfare {
+                components.append("\(number) \(street)")
+            } else {
+                components.append(street)
+            }
+        }
+
+        if let city = locality {
+            components.append(city)
+        }
+
+        if let state = administrativeArea {
+            components.append(state)
+        }
+
+        return components.joined(separator: ", ")
+    }
+}
 
 enum LocationError: Error, CustomLocalizedStringResourceConvertible {
     case permissionDenied

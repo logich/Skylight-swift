@@ -204,21 +204,25 @@ struct LoginRequest: Encodable {
 }
 
 struct CreateCalendarEventRequest: Encodable {
-    let title: String
-    let startDate: Date
-    let endDate: Date?
+    let summary: String
+    let startsAt: Date
+    let endsAt: Date
     let allDay: Bool
     let location: String?
-    let notes: String?
+    let description: String?
+    let categoryIds: [String]?
+    let timezone: String?
 }
 
 struct UpdateCalendarEventRequest: Encodable {
-    let title: String?
-    let startDate: Date?
-    let endDate: Date?
+    let summary: String?
+    let startsAt: Date?
+    let endsAt: Date?
     let allDay: Bool?
     let location: String?
-    let notes: String?
+    let description: String?
+    let categoryIds: [String]?
+    let timezone: String?
 }
 
 struct CreateChoreRequest: Encodable {

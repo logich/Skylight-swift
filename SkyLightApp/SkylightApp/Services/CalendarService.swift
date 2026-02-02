@@ -2,6 +2,7 @@ import Foundation
 
 protocol CalendarServiceProtocol {
     func getEvents(frameId: String, from startDate: Date, to endDate: Date, timezone: String) async throws -> [CalendarEvent]
+    func createEvent(frameId: String, event: CreateCalendarEventRequest) async throws -> CalendarEvent
 }
 
 final class CalendarService: CalendarServiceProtocol {
@@ -27,5 +28,11 @@ final class CalendarService: CalendarServiceProtocol {
         }
         #endif
         return events
+    }
+
+    func createEvent(frameId: String, event: CreateCalendarEventRequest) async throws -> CalendarEvent {
+        let endpoint = SkylightEndpoint.createCalendarEvent(frameId: frameId, event: event)
+        let response: CalendarEventResponse = try await apiClient.request(endpoint)
+        return response.event
     }
 }

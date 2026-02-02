@@ -155,3 +155,71 @@ struct CalendarIncludedAttributes: Codable {
     let profilePicUrl: String?
     let linkedToProfile: Bool?
 }
+
+// MARK: - Single Event Response (for create/update)
+struct CalendarEventResponse: Codable {
+    let data: CalendarEventData
+    let included: [CalendarIncludedData]?
+
+    var event: CalendarEvent {
+        let eventData = data
+
+        // Build a lookup for categories by id
+        var categoryInfo: [String: CalendarIncludedData] = [:]
+        if let included = included {
+            for item in included where item.type == "category" {
+                categoryInfo[item.id] = item
+            }
+        }
+
+        guard let startDate = eventData.attributes.startsAt,
+              let endDate = eventData.attributes.endsAt else {
+            // Return a minimal event if dates are missing
+            return CalendarEvent(
+                id: eventData.id,
+                title: eventData.attributes.summary,
+                description: eventData.attributes.description,
+                startDate: Date(),
+                endDate: Date(),
+                isAllDay: eventData.attributes.allDay ?? false,
+                location: eventData.attributes.location,
+                isRecurring: eventData.attributes.recurring ?? false,
+                categoryId: nil,
+                categoryColor: nil,
+                attendees: []
+            )
+        }
+
+        let categoryIds = eventData.relationships?.categories?.data?.map { $0.id } ?? []
+        let primaryCategoryId = categoryIds.first
+        let primaryCategoryColor = primaryCategoryId.flatMap { categoryInfo[$0]?.attributes?.color }
+
+        let attendees: [EventAttendee] = categoryIds.compactMap { categoryId -> EventAttendee? in
+            guard let info = categoryInfo[categoryId],
+                  let attrs = info.attributes,
+                  let label = attrs.label else {
+                return nil
+            }
+            return EventAttendee(
+                id: categoryId,
+                name: label,
+                color: attrs.color,
+                avatarUrl: attrs.profilePicUrl
+            )
+        }
+
+        return CalendarEvent(
+            id: eventData.id,
+            title: eventData.attributes.summary,
+            description: eventData.attributes.description,
+            startDate: startDate,
+            endDate: endDate,
+            isAllDay: eventData.attributes.allDay ?? false,
+            location: eventData.attributes.location,
+            isRecurring: eventData.attributes.recurring ?? false,
+            categoryId: primaryCategoryId,
+            categoryColor: primaryCategoryColor,
+            attendees: attendees
+        )
+    }
+}

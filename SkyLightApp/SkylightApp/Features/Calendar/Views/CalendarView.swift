@@ -5,6 +5,9 @@ struct CalendarView: View {
     @ObservedObject private var deepLinkManager = DeepLinkManager.shared
     @State private var deepLinkEvent: CalendarEvent?
     @State private var showDeepLinkEvent = false
+    @State private var showSettings = false
+    @State private var isSearching = false
+    @State private var showCreateEvent = false
 
     var body: some View {
         NavigationStack {
@@ -23,7 +26,32 @@ struct CalendarView: View {
             }
             .navigationTitle("Calendar")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Today") {
+                        viewModel.goToToday()
+                    }
+                    .disabled(viewModel.selectedDate.isToday)
+                }
+
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    Button {
+                        isSearching = true
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                    }
+
+                    Button {
+                        showCreateEvent = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gear")
+                    }
+
                     Menu {
                         ForEach(CalendarViewModel.DisplayMode.allCases, id: \.self) { mode in
                             Button {
@@ -41,14 +69,24 @@ struct CalendarView: View {
                         Label("View Mode", systemImage: "calendar.badge.clock")
                     }
                 }
-
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Today") {
-                        viewModel.goToToday()
-                    }
-                    .disabled(viewModel.selectedDate.isToday)
-                }
             }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
+            }
+            .sheet(isPresented: $showCreateEvent) {
+                CreateEventView(
+                    selectedDate: viewModel.selectedDate,
+                    onEventCreated: {
+                        Task { await viewModel.refreshEvents() }
+                    }
+                )
+            }
+            .searchable(
+                text: $viewModel.searchQuery,
+                isPresented: $isSearching,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search events"
+            )
             .task {
                 await viewModel.loadEvents()
             }
@@ -167,7 +205,7 @@ struct CalendarView: View {
     }
 
     private var groupedEvents: [Date: [CalendarEvent]] {
-        Dictionary(grouping: viewModel.events) { event in
+        Dictionary(grouping: viewModel.filteredEvents) { event in
             event.startDate.startOfDay
         }
     }

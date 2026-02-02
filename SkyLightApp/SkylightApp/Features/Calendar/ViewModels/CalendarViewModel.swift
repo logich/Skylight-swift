@@ -8,6 +8,20 @@ final class CalendarViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: Error?
     @Published var showError: Bool = false
+    @Published var searchQuery: String = ""
+
+    var filteredEvents: [CalendarEvent] {
+        guard !searchQuery.trimmingCharacters(in: .whitespaces).isEmpty else {
+            return events
+        }
+        let query = searchQuery.lowercased()
+        return events.filter { event in
+            event.title.lowercased().contains(query) ||
+            event.location?.lowercased().contains(query) ?? false ||
+            event.description?.lowercased().contains(query) ?? false ||
+            event.attendees.contains { $0.name.lowercased().contains(query) }
+        }
+    }
 
     private let calendarService: CalendarServiceProtocol
     private let authManager: AuthenticationManager
@@ -134,6 +148,11 @@ final class CalendarViewModel: ObservableObject {
 
     func clearCache() {
         eventsCache.removeAll()
+    }
+
+    func refreshEvents() async {
+        clearCache()
+        await loadEvents(forceRefresh: true)
     }
 
     func fetchEvent(byId eventId: String) async -> CalendarEvent? {
