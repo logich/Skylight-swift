@@ -6,11 +6,15 @@ An unofficial native iOS app for [Skylight Calendar](https://www.ourskylight.com
 
 ## Features
 
-- **Calendar**: View your synced calendar events with day, week, and month views
-- **Chores**: Create, assign, and complete chores with optional recurrence
-- **Lists**: Manage shopping and to-do lists with your family
-- **Family**: View family members and connected Skylight devices
-- **Multi-household**: Support for accounts with multiple Skylight frames
+- **Calendar Views**: View your synced calendar events with day, week, and month views
+- **Event Creation**: Create new calendar events with location, attendees, and recurrence
+- **Drive Time Calculations**: Automatic calculation of travel time to event locations
+- **Time-to-Leave Notifications**: Get notified when it's time to leave for your events
+- **Search & Filtering**: Search events by title, location, description, or attendees
+- **Home Screen Widget**: View upcoming events and "Leave Now" alerts on your home screen
+- **Shortcuts Automation**: 7 App Intents for automating tasks (e.g., start car climate control before events)
+- **Background Sync**: Automatic calendar refresh in the background
+- **Multi-household Support**: Support for accounts with multiple Skylight frames
 
 ## Screenshots
 
@@ -20,7 +24,7 @@ An unofficial native iOS app for [Skylight Calendar](https://www.ourskylight.com
 
 - **macOS**: 13.0 or later (for Xcode 15)
 - **Xcode**: 15.0 or later
-- **iOS**: 16.0 or later
+- **iOS**: 18.0 or later
 - **Apple Developer Account**: Free account works for personal device testing
 - **Skylight Account**: An existing account at [ourskylight.com](https://www.ourskylight.com/)
 
@@ -113,6 +117,10 @@ mv SkyLightApp SkyLightApp-source
 
 6. Xcode will create a provisioning profile automatically
 
+7. **Repeat for SkylightWidgetExtension target** (needed for the home screen widget)
+
+**Note**: The app uses App Groups (`group.com.rosetrace.SkylightApp`) for data sharing. You may need to update this identifier in `SharedConstants.swift` if you encounter signing issues.
+
 ### Step 7: Build and Run
 
 #### On Simulator
@@ -145,40 +153,83 @@ mv SkyLightApp SkyLightApp-source
 
 3. **Select a household** if you have multiple Skylight frames
 
-4. **Navigate** using the bottom tab bar:
-   - **Calendar**: View upcoming events
-   - **Chores**: Manage family chores
-   - **Lists**: Shopping and to-do lists
-   - **Family**: View family members
-   - **Settings**: Account and app settings
+4. **View and manage your calendar**:
+   - Switch between day, week, and month views
+   - Search events using the search bar
+   - Tap events to view details
+   - Create new events with the + button
+   - Access settings from the toolbar (buffer time, notifications)
+
+5. **Use Shortcuts automation**:
+   - Open the Shortcuts app on iOS
+   - Add Skylight actions like "Get Today's Events" or "Check If Event Starting Soon"
+   - Create automations (e.g., "Start car climate control if event in 30 minutes")
+
+6. **Add the home screen widget**:
+   - Long-press your home screen → tap the + button
+   - Search for "Skylight" and select the widget
+   - View upcoming events and "Leave Now" alerts at a glance
+
+## Shortcuts Automation Examples
+
+The app provides 7 App Intents that can be used in the Shortcuts app:
+
+**Available Intents:**
+- Get Today's Events
+- Get Events for Date
+- Get Upcoming Events (next N days)
+- Get Next Event
+- Get Events Starting Soon (within N minutes)
+- Check If Event Starting Soon (returns true/false)
+- Get Minutes Until Next Event
+
+**Example Automations:**
+- **Pre-heat car**: "IF event starting in 30 minutes THEN start car climate control"
+- **Set home scene**: "Get next event → IF event has location THEN set 'Leaving Home' scene"
+- **Morning briefing**: "Get today's events → Show notification with event list"
+- **Voice queries**: Ask Siri "What's next on Skylight?"
+
+To create automations:
+1. Open the **Shortcuts** app
+2. Tap **+** to create new shortcut
+3. Search for "Skylight" actions
+4. Combine with other actions (HomeKit, notifications, etc.)
 
 ## Project Structure
 
 ```
-SkyLightApp/
-├── App/                          # App entry point and navigation
-│   ├── SkyLightApp.swift         # @main app struct
-│   ├── ContentView.swift         # Root view with auth routing
-│   └── MainTabView.swift         # Tab bar navigation
-├── Core/
-│   ├── Network/                  # API layer
-│   │   ├── APIClient.swift       # HTTP client
-│   │   ├── APIEndpoint.swift     # Endpoint protocol
-│   │   ├── APIError.swift        # Error types
-│   │   └── SkylightEndpoint.swift # All API endpoints
-│   ├── Authentication/           # Auth management
-│   │   ├── AuthenticationManager.swift
-│   │   └── KeychainManager.swift
-│   └── Models/                   # Data models
-├── Features/                     # Feature modules
-│   ├── Authentication/           # Login, frame selection
-│   ├── Calendar/                 # Calendar views
-│   ├── Chores/                   # Chores management
-│   ├── Lists/                    # Lists management
-│   ├── Family/                   # Family & devices
-│   └── Settings/                 # App settings
-├── Services/                     # Business logic layer
-└── Utilities/                    # Extensions & helpers
+SkylightApp/
+├── SkylightApp/                  # Main iOS app target
+│   ├── App/                      # App entry point and navigation
+│   │   ├── SkyLightApp.swift     # @main app struct
+│   │   ├── ContentView.swift     # Root view with auth routing
+│   │   ├── BackgroundTaskManager.swift
+│   │   ├── DeepLinkManager.swift
+│   │   └── AppIntents/           # Shortcuts integration
+│   │       └── CalendarIntents.swift
+│   ├── Core/
+│   │   ├── Network/              # API layer
+│   │   │   ├── APIClient.swift   # HTTP client
+│   │   │   ├── APIEndpoint.swift # Endpoint protocol
+│   │   │   └── SkylightEndpoint.swift # All API endpoints
+│   │   ├── Authentication/       # Auth management
+│   │   │   ├── AuthenticationManager.swift
+│   │   │   └── KeychainManager.swift
+│   │   └── Models/               # Data models (CalendarEvent, User, Frame, etc.)
+│   ├── Features/                 # Feature modules
+│   │   ├── Authentication/       # Login, frame selection
+│   │   ├── Calendar/             # Calendar views, event creation, location search
+│   │   └── Settings/             # App settings
+│   ├── Services/                 # Business logic layer
+│   │   ├── CalendarService.swift
+│   │   ├── LocationService.swift
+│   │   ├── DriveTimeManager.swift
+│   │   ├── NotificationService.swift
+│   │   ├── FamilyService.swift
+│   │   └── SharedDataManager.swift
+│   └── Utilities/                # Extensions & helpers
+├── SkylightAppTests/             # Unit and integration tests
+└── SkylightWidget/               # Home screen widget extension
 ```
 
 ## Troubleshooting
@@ -198,7 +249,7 @@ Make sure all source files are added to your target:
 ### "Unable to install app" on device
 
 1. Ensure your device is trusted (**Settings → General → VPN & Device Management**)
-2. Check that your device is running iOS 16.0 or later
+2. Check that your device is running iOS 18.0 or later
 
 ### Build fails with "Cannot find type X in scope"
 
@@ -211,19 +262,44 @@ Ensure files are organized in groups (yellow folders), not folder references (bl
 - Verify your Skylight credentials are correct
 - The API may have changed; check the issues page for updates
 
+### Widget not updating
+
+1. Ensure you're logged in and have selected a frame
+2. Check that Background App Refresh is enabled (**Settings → General → Background App Refresh**)
+3. Widget updates when app syncs in background (every 15+ minutes)
+
+### Notifications not appearing
+
+1. Grant notification permissions when prompted on first launch
+2. Enable alerts in Settings view (in-app, accessible from toolbar)
+3. Check iOS notification settings: **Settings → Notifications → Skylight**
+
 ## Architecture
 
 The app follows the **MVVM** (Model-View-ViewModel) architecture pattern:
 
-- **Models**: Data structures matching the API responses
+- **Models**: Data structures matching the API responses (Codable)
 - **Views**: SwiftUI views for the UI
-- **ViewModels**: `@Observable` classes managing view state and business logic
-- **Services**: Protocol-based API communication layer
+- **ViewModels**: `@MainActor ObservableObject` classes managing view state and business logic
+- **Services**: Protocol-based API communication layer for testability
 
 Key technologies:
 - **SwiftUI** for declarative UI
 - **Async/await** for networking
+- **Combine** for reactive state management (@Published properties)
 - **Keychain** for secure credential storage
+- **WidgetKit** for home screen widget
+- **App Intents** for Shortcuts automation
+- **BackgroundTasks** for periodic calendar sync
+- **App Groups** for data sharing between app and widget
+- **CoreLocation & MapKit** for drive time calculations
+
+Key features:
+- Smart caching (60-min for events, 30-min for drive times)
+- Protocol-based dependency injection for testing
+- Background refresh every 15 minutes
+- Time-to-leave notifications based on location
+- JSON:API format handling for Skylight API
 
 ## Acknowledgments
 
