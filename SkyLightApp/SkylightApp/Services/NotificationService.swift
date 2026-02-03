@@ -229,14 +229,23 @@ final class NotificationService {
         return body
     }
 
-    /// Triggers Rivian climate control shortcut
-    func startRivianClimate(for vehicle: String = "R1S") {
-        let urlString = "shortcuts://run-shortcut?name=Start climate control&input=\(vehicle)"
-        
-        guard let encodedURL = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: encodedURL) else { return }
-        
-        UIApplication.shared.open(url)
+    /// Triggers Rivian climate control using App Intent
+    func startRivianClimate(eventTitle: String, vehicle: String = "R1S") async {
+        let intent = AutoStartRivianClimateIntent()
+        intent.eventTitle = eventTitle
+        intent.vehicleModel = vehicle
+
+        do {
+            _ = try await intent.perform()
+
+            #if DEBUG
+            print("NotificationService: Successfully triggered climate control for '\(eventTitle)'")
+            #endif
+        } catch {
+            #if DEBUG
+            print("NotificationService: Failed to start climate control - \(error)")
+            #endif
+        }
     }
 }
 

@@ -28,6 +28,15 @@ struct SkyLightApp: App {
             // Sync frame selection when app becomes active
             if newPhase == .active {
                 syncFrameSelection()
+
+                // Start climate automation monitoring when app is active
+                ClimateAutomationService.shared.startMonitoring(climateStartMinutes: 30)
+            } else if newPhase == .background {
+                // Keep monitoring in background
+                // This will continue for a limited time
+            } else if newPhase == .inactive {
+                // Stop monitoring when inactive to save battery
+                ClimateAutomationService.shared.stopMonitoring()
             }
         }
     }
@@ -69,7 +78,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
+    ) async {
         let userInfo = response.notification.request.content.userInfo
 
         switch response.actionIdentifier {
@@ -86,10 +95,11 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
         case SharedConstants.Notifications.startClimateActionId:
             // User tapped "Start Climate" action
+            let eventTitle = userInfo["eventTitle"] as? String ?? "Event"
             #if DEBUG
-            print("NotificationDelegate: Starting Rivian climate control")
+            print("NotificationDelegate: Starting Rivian climate control for '\(eventTitle)'")
             #endif
-            NotificationService.shared.startRivianClimate()
+            await NotificationService.shared.startRivianClimate(eventTitle: eventTitle)
 
         case SharedConstants.Notifications.dismissActionId:
             // User dismissed the notification

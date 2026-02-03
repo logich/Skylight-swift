@@ -11,7 +11,7 @@ struct ContentView: View {
             case .authenticated:
                 FrameSelectionView()
             case .frameSelected:
-                MainTabView()
+                CalendarView()
             }
         }
         .animation(.default, value: authManager.authState)
