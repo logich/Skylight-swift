@@ -49,7 +49,40 @@ struct CalendarEventEntity: AppEntity {
 
 struct CalendarEventQuery: EntityQuery {
     func entities(for identifiers: [String]) async throws -> [CalendarEventEntity] {
-        []
+        guard let frameId = await AuthenticationManager.shared.currentFrameId else {
+            throw IntentError.notLoggedIn
+        }
+
+        #if DEBUG
+        print("CalendarEventQuery: Fetching entities for \(identifiers.count) identifier(s): \(identifiers)")
+        #endif
+
+        // Fetch events from a 3-month window (1 month back, 2 months forward)
+        // This matches the approach used in CalendarViewModel.fetchEvent(byId:)
+        let service = CalendarService()
+        let calendar = Calendar.current
+        let startDate = calendar.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+        let endDate = calendar.date(byAdding: .month, value: 2, to: Date()) ?? Date()
+
+        let allEvents = try await service.getEvents(
+            frameId: frameId,
+            from: startDate,
+            to: endDate,
+            timezone: TimeZone.current.identifier
+        )
+
+        #if DEBUG
+        print("CalendarEventQuery: Fetched \(allEvents.count) events from API")
+        #endif
+
+        // Filter to only requested event IDs
+        let matchingEvents = allEvents.filter { identifiers.contains($0.id) }
+
+        #if DEBUG
+        print("CalendarEventQuery: Found \(matchingEvents.count) matching event(s)")
+        #endif
+
+        return matchingEvents.map { CalendarEventEntity(from: $0) }
     }
 
     func suggestedEntities() async throws -> [CalendarEventEntity] {
