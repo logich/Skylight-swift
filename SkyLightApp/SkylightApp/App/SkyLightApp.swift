@@ -76,8 +76,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
+        didReceive response: UNNotificationResponse
     ) async {
         let userInfo = response.notification.request.content.userInfo
 
@@ -108,7 +107,5 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         default:
             break
         }
-
-        completionHandler()
     }
 }

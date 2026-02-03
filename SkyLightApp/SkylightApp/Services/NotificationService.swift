@@ -111,6 +111,7 @@ final class NotificationService {
         content.body = createNotificationBody(for: event)
         content.sound = .default
         content.categoryIdentifier = SharedConstants.Notifications.timeToLeaveCategoryId
+        content.interruptionLevel = .timeSensitive
 
         // Add event ID for deep linking
         content.userInfo = [
