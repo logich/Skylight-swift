@@ -21,7 +21,31 @@ Skylight-swift is an unofficial native iOS app for Skylight Calendar, built with
 - Keychain for secure credential storage
 - App Groups (`group.com.rosetrace.SkylightApp`) for data sharing between app and widget
 
-## Build Commands
+## Xcode MCP Tools (Preferred)
+
+This project has Xcode MCP (Model Context Protocol) tools available. **Always prefer using MCP tools over xcodebuild commands** as they provide better integration, error handling, and feedback.
+
+### Available MCP Tools
+- **xcode_build** - Build the project (preferred over `xcodebuild build`)
+- **xcode_test** - Run tests (preferred over `xcodebuild test`)
+- **xcode_clean** - Clean build folder (preferred over `xcodebuild clean`)
+- **xcode_get_build_settings** - Retrieve build settings
+- **xcode_get_build_errors** - Get current build errors and warnings
+- **xcode_run_app** - Build and run the app in simulator
+- **xcode_stop_app** - Stop a running app
+- **xcode_list_simulators** - List available iOS simulators
+- **xcode_boot_simulator** - Boot a specific simulator
+- **xcode_open_file** - Open a file in Xcode at a specific line
+
+### When to Use MCP Tools
+- Building the app: Use `xcode_build` instead of xcodebuild
+- Running tests: Use `xcode_test` instead of xcodebuild test
+- Checking errors: Use `xcode_get_build_errors` for quick diagnostics
+- Running app: Use `xcode_run_app` for build + launch in one step
+
+## Build Commands (Fallback)
+
+Use these xcodebuild commands only if MCP tools are unavailable.
 
 ### Building the App
 ```bash
@@ -262,7 +286,7 @@ SkylightApp/
 - Registered in `SkyLightApp.swift` on app launch
 - Must complete within ~30 seconds
 - Updates calendar data and widget
-- Test using Xcode debug menu: Debug → Simulate Background Fetch
+- Test using `xcode_run_app` MCP tool then Xcode debug menu: Debug → Simulate Background Fetch
 
 ### Adding or Modifying App Intents (Shortcuts)
 - All intents defined in `App/AppIntents/CalendarIntents.swift`
@@ -305,7 +329,8 @@ The App Intents enable powerful automations:
 
 ## Testing Notes
 
-- Run tests before committing changes
+- Run tests before committing changes using `xcode_test` MCP tool (preferred) or xcodebuild
+- Use `xcode_get_build_errors` to quickly check for build issues
 - Mock all network dependencies in tests
 - Use `TestDataFactory` for consistent test data
 - Test ViewModel state transitions (loading → success/error)

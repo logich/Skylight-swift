@@ -120,6 +120,36 @@ final class BackgroundTaskManager {
 
         // Process events to update drive times and notifications
         await DriveTimeManager.shared.processEvents(events)
+
+        // Check if climate control should be triggered
+        await checkAndTriggerClimateControl()
+    }
+
+    /// Checks if any events require climate control to be started
+    private func checkAndTriggerClimateControl() async {
+        // Only proceed if climate automation is enabled
+        guard SharedDataManager.shared.climateControlAutomationEnabled else {
+            return
+        }
+
+        let events = SharedDataManager.shared.loadEvents()
+        let now = Date()
+
+        // Find events where it's time to leave (within 5 minutes of leave time)
+        for event in events {
+            guard let leaveByDate = event.leaveByDate else { continue }
+
+            // Check if leave time is within the next 5 minutes
+            let timeUntilLeave = leaveByDate.timeIntervalSince(now)
+            if timeUntilLeave >= 0 && timeUntilLeave <= 5 * 60 {
+                #if DEBUG
+                print("BackgroundTaskManager: Triggering climate control for '\(event.title)'")
+                #endif
+
+                await NotificationService.shared.startRivianClimate(eventTitle: event.title)
+                break // Only trigger for one event per refresh
+            }
+        }
     }
 }
 

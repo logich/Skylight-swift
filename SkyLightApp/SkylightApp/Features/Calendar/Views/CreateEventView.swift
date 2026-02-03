@@ -6,13 +6,20 @@ struct CreateEventView: View {
     @FocusState private var focusedField: Field?
     @State private var showLocationSearch = false
 
-    let onEventCreated: () -> Void
+    let onEventSaved: () -> Void
 
     private enum Field { case title, description }
 
+    /// Initialize for creating a new event
     init(selectedDate: Date = Date(), onEventCreated: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: CreateEventViewModel(initialDate: selectedDate))
-        self.onEventCreated = onEventCreated
+        self.onEventSaved = onEventCreated
+    }
+
+    /// Initialize for editing an existing event
+    init(event: CalendarEvent, onEventSaved: @escaping () -> Void) {
+        _viewModel = StateObject(wrappedValue: CreateEventViewModel(event: event))
+        self.onEventSaved = onEventSaved
     }
 
     var body: some View {
@@ -70,29 +77,66 @@ struct CreateEventView: View {
                         .focused($focusedField, equals: .description)
                         .lineLimit(3...6)
                 }
+
+                if viewModel.isEditMode {
+                    Section {
+                        Button(role: .destructive) {
+                            viewModel.showDeleteConfirmation = true
+                        } label: {
+                            HStack {
+                                Spacer()
+                                if viewModel.isDeleting {
+                                    ProgressView()
+                                        .tint(.red)
+                                } else {
+                                    Text("Delete Event")
+                                }
+                                Spacer()
+                            }
+                        }
+                        .disabled(viewModel.isLoading || viewModel.isDeleting)
+                    }
+                }
             }
-            .navigationTitle("Add Event")
+            .navigationTitle(viewModel.isEditMode ? "Edit Event" : "Add Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
+                    Button(viewModel.isEditMode ? "Save" : "Add") {
                         Task {
-                            if await viewModel.createEvent() {
-                                onEventCreated()
+                            if await viewModel.saveEvent() {
+                                onEventSaved()
                                 dismiss()
                             }
                         }
                     }
-                    .disabled(!viewModel.isFormValid || viewModel.isLoading)
+                    .disabled(!viewModel.isFormValid || viewModel.isLoading || viewModel.isDeleting)
                 }
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK") { }
             } message: {
-                Text(viewModel.error?.localizedDescription ?? "Failed to create event")
+                Text(viewModel.error?.localizedDescription ?? "Failed to save event")
+            }
+            .confirmationDialog(
+                "Delete Event",
+                isPresented: $viewModel.showDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    Task {
+                        if await viewModel.deleteEvent() {
+                            onEventSaved()
+                            dismiss()
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to delete this event? This action cannot be undone.")
             }
             .task {
                 await viewModel.loadProfiles()

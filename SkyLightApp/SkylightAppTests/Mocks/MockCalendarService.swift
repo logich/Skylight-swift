@@ -15,6 +15,14 @@ final class MockCalendarService: CalendarServiceProtocol {
     var createEventRequest: CreateCalendarEventRequest?
     var createEventResult: Result<CalendarEvent, Error>?
 
+    // Update event mock properties
+    var updateEventCalled = false
+    var updateEventRequest: UpdateCalendarEventRequest?
+    var lastEventId: String?
+
+    // Delete event mock properties
+    var deleteEventCalled = false
+
     func getEvents(frameId: String, from startDate: Date, to endDate: Date, timezone: String) async throws -> [CalendarEvent] {
         getEventsCalled = true
         lastFrameId = frameId
@@ -53,6 +61,42 @@ final class MockCalendarService: CalendarServiceProtocol {
         )
     }
 
+    func updateEvent(frameId: String, eventId: String, event: UpdateCalendarEventRequest) async throws -> CalendarEvent {
+        updateEventCalled = true
+        updateEventRequest = event
+        lastFrameId = frameId
+        lastEventId = eventId
+
+        if let error = errorToThrow {
+            throw error
+        }
+
+        // Return a mock updated event
+        return CalendarEvent(
+            id: eventId,
+            title: event.summary ?? "Updated Event",
+            description: event.description,
+            startDate: event.startsAt ?? Date(),
+            endDate: event.endsAt ?? Date(),
+            isAllDay: event.allDay ?? false,
+            location: event.location,
+            isRecurring: false,
+            categoryId: event.categoryIds?.first,
+            categoryColor: nil,
+            attendees: []
+        )
+    }
+
+    func deleteEvent(frameId: String, eventId: String) async throws {
+        deleteEventCalled = true
+        lastFrameId = frameId
+        lastEventId = eventId
+
+        if let error = errorToThrow {
+            throw error
+        }
+    }
+
     func reset() {
         eventsToReturn = []
         errorToThrow = nil
@@ -64,5 +108,9 @@ final class MockCalendarService: CalendarServiceProtocol {
         createEventCalled = false
         createEventRequest = nil
         createEventResult = nil
+        updateEventCalled = false
+        updateEventRequest = nil
+        lastEventId = nil
+        deleteEventCalled = false
     }
 }

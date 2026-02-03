@@ -48,6 +48,17 @@ final class SharedDataManager {
         }
     }
 
+    /// Whether automatic climate control is enabled for time-to-leave events
+    var climateControlAutomationEnabled: Bool {
+        get {
+            defaults?.bool(forKey: SharedConstants.UserDefaultsKeys.climateControlAutomationEnabled)
+                ?? SharedConstants.Defaults.climateControlAutomationEnabled
+        }
+        set {
+            defaults?.set(newValue, forKey: SharedConstants.UserDefaultsKeys.climateControlAutomationEnabled)
+        }
+    }
+
     /// Currently selected frame ID
     var selectedFrameId: String? {
         get {

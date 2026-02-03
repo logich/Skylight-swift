@@ -7,6 +7,7 @@ struct SettingsView: View {
     // Drive time settings
     @State private var driveTimeAlertsEnabled = SharedDataManager.shared.driveTimeAlertsEnabled
     @State private var bufferTimeMinutes = SharedDataManager.shared.bufferTimeMinutes
+    @State private var climateControlAutomationEnabled = SharedDataManager.shared.climateControlAutomationEnabled
     @State private var isRequestingNotificationPermission = false
 
     var body: some View {
@@ -119,6 +120,7 @@ struct SettingsView: View {
                 // Sync state with shared data
                 driveTimeAlertsEnabled = SharedDataManager.shared.driveTimeAlertsEnabled
                 bufferTimeMinutes = SharedDataManager.shared.bufferTimeMinutes
+                climateControlAutomationEnabled = SharedDataManager.shared.climateControlAutomationEnabled
             }
         }
     }
@@ -160,11 +162,23 @@ struct SettingsView: View {
                         await DriveTimeManager.shared.updateBufferTime(newValue)
                     }
                 }
+
+                Toggle(isOn: $climateControlAutomationEnabled) {
+                    Label {
+                        Text("Auto Start Climate")
+                    } icon: {
+                        Image(systemName: "thermometer.sun.fill")
+                            .foregroundStyle(.red)
+                    }
+                }
+                .onChange(of: climateControlAutomationEnabled) { _, newValue in
+                    SharedDataManager.shared.climateControlAutomationEnabled = newValue
+                }
             }
         } header: {
             Text("Time to Leave")
         } footer: {
-            Text("Get notified when it's time to leave for events with locations. Buffer time adds extra minutes before the calculated leave time.")
+            Text("Get notified when it's time to leave for events with locations. Buffer time adds extra minutes before the calculated leave time.\(driveTimeAlertsEnabled && climateControlAutomationEnabled ? " Climate control will start automatically when it's time to leave." : "")")
         }
     }
 

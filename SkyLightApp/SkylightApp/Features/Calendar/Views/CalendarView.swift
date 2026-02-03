@@ -105,7 +105,9 @@ struct CalendarView: View {
             }
             .navigationDestination(isPresented: $showDeepLinkEvent) {
                 if let event = deepLinkEvent {
-                    EventDetailView(event: event)
+                    EventDetailView(event: event) {
+                        Task { await viewModel.refreshEvents() }
+                    }
                 }
             }
         }
@@ -190,7 +192,9 @@ struct CalendarView: View {
                 Section {
                     ForEach(groupedEvents[date] ?? []) { event in
                         NavigationLink {
-                            EventDetailView(event: event)
+                            EventDetailView(event: event) {
+                                Task { await viewModel.refreshEvents() }
+                            }
                         } label: {
                         EventRow(event: event)
                         }
@@ -299,7 +303,9 @@ struct CalendarView: View {
         List {
             ForEach(eventsForSelectedDay) { event in
                 NavigationLink {
-                    EventDetailView(event: event)
+                    EventDetailView(event: event) {
+                        Task { await viewModel.refreshEvents() }
+                    }
                 } label: {
                     EventRow(event: event)
                 }
@@ -430,6 +436,16 @@ struct EventRow: View {
 
 struct EventDetailView: View {
     let event: CalendarEvent
+    let onEventUpdated: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var showEditEvent = false
+    @State private var eventWasDeleted = false
+
+    init(event: CalendarEvent, onEventUpdated: @escaping () -> Void = {}) {
+        self.event = event
+        self.onEventUpdated = onEventUpdated
+    }
 
     var body: some View {
         List {
@@ -502,6 +518,24 @@ struct EventDetailView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Event Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Edit") {
+                    showEditEvent = true
+                }
+            }
+        }
+        .sheet(isPresented: $showEditEvent) {
+            CreateEventView(event: event) {
+                onEventUpdated()
+                eventWasDeleted = true
+            }
+        }
+        .onChange(of: eventWasDeleted) { _, deleted in
+            if deleted {
+                dismiss()
+            }
+        }
     }
 }
 

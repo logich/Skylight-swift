@@ -18,6 +18,9 @@ enum SharedConstants {
         /// Buffer time in minutes before calculated leave time (Int)
         static let bufferTimeMinutes = "bufferTimeMinutes"
 
+        /// Whether automatic climate control is enabled (Bool)
+        static let climateControlAutomationEnabled = "climateControlAutomationEnabled"
+
         /// Encoded array of WidgetEvent with drive time info (Data)
         static let cachedEventsWithDriveTime = "cachedEventsWithDriveTime"
 
@@ -41,6 +44,9 @@ enum SharedConstants {
 
         /// Available buffer time options in minutes
         static let bufferTimeOptions = [5, 10, 15, 20, 30]
+
+        /// Climate control automation is disabled by default
+        static let climateControlAutomationEnabled = false
     }
 
     /// Notification identifiers

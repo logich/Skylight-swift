@@ -3,6 +3,8 @@ import Foundation
 protocol CalendarServiceProtocol {
     func getEvents(frameId: String, from startDate: Date, to endDate: Date, timezone: String) async throws -> [CalendarEvent]
     func createEvent(frameId: String, event: CreateCalendarEventRequest) async throws -> CalendarEvent
+    func updateEvent(frameId: String, eventId: String, event: UpdateCalendarEventRequest) async throws -> CalendarEvent
+    func deleteEvent(frameId: String, eventId: String) async throws
 }
 
 final class CalendarService: CalendarServiceProtocol {
@@ -34,5 +36,16 @@ final class CalendarService: CalendarServiceProtocol {
         let endpoint = SkylightEndpoint.createCalendarEvent(frameId: frameId, event: event)
         let response: CalendarEventResponse = try await apiClient.request(endpoint)
         return response.event
+    }
+
+    func updateEvent(frameId: String, eventId: String, event: UpdateCalendarEventRequest) async throws -> CalendarEvent {
+        let endpoint = SkylightEndpoint.updateCalendarEvent(frameId: frameId, eventId: eventId, event: event)
+        let response: CalendarEventResponse = try await apiClient.request(endpoint)
+        return response.event
+    }
+
+    func deleteEvent(frameId: String, eventId: String) async throws {
+        let endpoint = SkylightEndpoint.deleteCalendarEvent(frameId: frameId, eventId: eventId)
+        try await apiClient.requestWithoutResponse(endpoint)
     }
 }
